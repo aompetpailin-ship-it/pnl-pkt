@@ -1,0 +1,13 @@
+{
+  "name": "pnl-pktv1",
+  "version": "1.0.0",
+  "description": "ระบบวิเคราะห์รายได้และค่าใช้จ่าย P&L ร้านผมขอทอด บน Cloudflare",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.0"
+  }
+}

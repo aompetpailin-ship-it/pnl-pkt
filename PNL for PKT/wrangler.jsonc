@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pnl-pkt",
+  "compatibility_date": "2024-08-01",
+  "assets": {
+    "directory": "."
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pnl-pkt-db",
+      "database_id": "6881919d-c89c-44c4-bf93-f6d1986f7088"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

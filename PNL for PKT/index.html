@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ระบบวิเคราะห์ P&L - ร้านผมขอทอด</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=19">
+    
+    <!-- Local Vendor Scripts for 100% Offline Reliability -->
+    <script src="apexcharts.min.js?v=12"></script>
+    <script src="lucide.min.js?v=12"></script>
+</head>
+<body class="dark-theme">
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <div class="login-background-overlay"></div>
+        <div class="login-card glass-panel">
+            <div class="login-header">
+                <div class="logo-container">
+                    <img src="logo.png" alt="ผมขอทอด โลโก้" class="brand-logo-img">
+                    <h1 class="brand-title">ผมขอทอด</h1>
+                </div>
+                <p class="brand-subtitle">ระบบวิเคราะห์รายได้และค่าใช้จ่ายรายสาขา</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username"><i data-lucide="user"></i> ชื่อผู้ใช้</label>
+                    <input type="text" id="username" placeholder="ระบุชื่อผู้ใช้งาน" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password"><i data-lucide="lock"></i> รหัสผ่าน</label>
+                    <input type="password" id="password" placeholder="ระบุรหัสผ่านของคุณ" required autocomplete="current-password">
+                </div>
+                <div id="login-error-msg" class="error-text hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!</div>
+                <button type="submit" class="btn-primary w-full">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APP CONTAINER -->
+    <div id="main-app" class="screen">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="ผมขอทอด โลโก้" class="brand-logo-img-sidebar">
+                <div class="sidebar-brand">
+                    <h2>ผมขอทอด</h2>
+                    <span>P&L Dashboard</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-view="dashboard">
+                        <a href="#"><i data-lucide="layout-dashboard"></i> แดชบอร์ดวิเคราะห์</a>
+                    </li>
+                    <li class="nav-item" data-view="budget">
+                        <a href="#"><i data-lucide="sliders"></i> ปรับแต่งงบประมาณ</a>
+                    </li>
+                    <li class="nav-item" data-view="transactions">
+                        <a href="#"><i data-lucide="receipt"></i> ประวัติธุรกรรม</a>
+                    </li>
+                    <li class="nav-item" data-view="shareholders">
+                        <a href="#"><i data-lucide="users"></i> ข้อมูลหุ้นและส่วนแบ่ง</a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar profile-logo-avatar" id="header-user-avatar">
+                        <img src="logo.png" alt="โลโก้ร้าน" class="profile-logo-img">
+                    </div>
+                    <div class="user-info">
+                        <span class="username" id="header-user-name">ผู้ใช้</span>
+                        <span class="user-role">ผู้ถือหุ้น</span>
+                    </div>
+                </div>
+                <button class="btn-logout" id="btn-logout">
+                    <i data-lucide="log-out"></i> ออกจากระบบ
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content-wrapper">
+            
+            <!-- Global Dashboard Filters (Header) -->
+            <header class="content-header">
+                <div class="header-title">
+                    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        <h1 id="view-title">แดชบอร์ดสรุปรายรับรายจ่าย</h1>
+                        <div class="db-status-badge" id="db-status-badge" title="สถานะการเชื่อมต่อ Cloudflare D1 Database">
+                            <span class="status-dot offline" id="db-status-dot"></span>
+                            <span id="db-status-text">Cloudflare D1: ตรวจสอบสถานะ...</span>
+                        </div>
+                    </div>
+                    <p id="view-subtitle" class="text-secondary">ยินดีต้อนรับสู่ระบบวิเคราะห์ร้านผมขอทอด</p>
+                </div>
+                
+                <div class="dashboard-filters glass-panel">
+                    <div class="filter-group">
+                        <label for="filter-branch"><i data-lucide="map-pin"></i> สาขา</label>
+                        <select id="filter-branch">
+                            <!-- จะใส่ค่าสาขาด้วย JS ตามสิทธิ์ -->
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filter-month"><i data-lucide="calendar"></i> ประจำเดือน</label>
+                        <select id="filter-month">
+                            <option value="2026-08" selected>สิงหาคม 2026</option>
+                            <option value="2026-07">กรกฎาคม 2026</option>
+                            <option value="2026-06">มิถุนายน 2026</option>
+                            <option value="2026-05">พฤษภาคม 2026</option>
+                            <option value="2026-04">เมษายน 2026</option>
+                            <option value="2026-03">มีนาคม 2026</option>
+                            <option value="2026-02">กุมภาพันธ์ 2026</option>
+                            <option value="2026-01">มกราคม 2026</option>
+                            <option value="2025-12">ธันวาคม 2025</option>
+                            <option value="2025-11">พฤศจิกายน 2025</option>
+                            <option value="2025-10">ตุลาคม 2025</option>
+                            <option value="2025-09">กันยายน 2025</option>
+                            <option value="2025-08">สิงหาคม 2025</option>
+                            <option value="2025-07">กรกฎาคม 2025</option>
+                            <option value="2025-06">มิถุนายน 2025</option>
+                            <option value="2025-05">พฤษภาคม 2025</option>
+                            <option value="2025-04">เมษายน 2025</option>
+                            <option value="2025-03">มีนาคม 2025</option>
+                            <option value="2025-02">กุมภาพันธ์ 2025</option>
+                            <option value="2025-01">มกราคม 2025</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn-outline" id="btn-export-pdf" style="height: 38px; align-self: flex-end; display: flex; align-items: center;">
+                        <i data-lucide="printer"></i> พิมพ์ PDF
+                    </button>
+                </div>
+            </header>
+
+            <!-- App Views Wrapper -->
+            <div class="view-container">
+                
+                <!-- VIEW 1: DASHBOARD -->
+                <section id="dashboard-view" class="app-view active">
+                    
+                    <!-- 1.1 KPI Row -->
+                    <div class="kpi-grid">
+                        <!-- Revenue KPI -->
+                        <div class="kpi-card glass-panel">
+                            <div class="kpi-header">
+                                <span class="kpi-label">รายรับรวม (Revenue)</span>
+                                <div class="kpi-icon icon-revenue"><i data-lucide="trending-up"></i></div>
+                            </div>
+                            <h2 class="kpi-value" id="kpi-revenue">฿0</h2>
+                            <div class="kpi-trend">
+                                <span class="trend-indicator positive" id="kpi-revenue-trend">
+                                    <i data-lucide="arrow-up"></i> 0%
+                                </span>
+                                <span class="trend-text">เทียบกับเดือนก่อน</span>
+                            </div>
+                            <div class="kpi-divider"></div>
+                            <div class="kpi-shareholder-profit" id="kpi-revenue-dividend">
+                                ส่วนแบ่งตามหุ้นของคุณ: <span class="gold-text">฿0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Expense KPI -->
+                        <div class="kpi-card glass-panel">
+                            <div class="kpi-header">
+                                <span class="kpi-label">รายจ่ายรวม (Expense)</span>
+                                <div class="kpi-icon icon-expense"><i data-lucide="trending-down"></i></div>
+                            </div>
+                            <h2 class="kpi-value" id="kpi-expense">฿0</h2>
+                            <div class="kpi-trend">
+                                <span class="trend-indicator negative" id="kpi-expense-trend">
+                                    <i data-lucide="arrow-down"></i> 0%
+                                </span>
+                                <span class="trend-text">เทียบกับเดือนก่อน</span>
+                            </div>
+                            <div class="kpi-divider"></div>
+                            <div class="kpi-shareholder-profit" id="kpi-expense-dividend">
+                                ภาระค่าใช้จ่ายตามสิทธิ์: <span class="gold-text">฿0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Net Profit KPI -->
+                        <div class="kpi-card glass-panel highlight-gold">
+                            <div class="kpi-header">
+                                <span class="kpi-label text-gold">กำไรสุทธิ (Net Profit)</span>
+                                <div class="kpi-icon icon-profit"><i data-lucide="dollar-sign"></i></div>
+                            </div>
+                            <h2 class="kpi-value text-gold" id="kpi-profit">฿0</h2>
+                            <div class="kpi-trend">
+                                <span class="trend-indicator positive" id="kpi-profit-trend">
+                                    <i data-lucide="arrow-up"></i> 0%
+                                </span>
+                                <span class="trend-text">เทียบกับเดือนก่อน</span>
+                            </div>
+                            <div class="kpi-divider"></div>
+                            <div class="kpi-shareholder-profit font-semibold" id="kpi-profit-dividend">
+                                ส่วนแบ่งกำไรสุทธิของคุณ: <span class="gold-text">฿0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Margin KPI -->
+                        <div class="kpi-card glass-panel">
+                            <div class="kpi-header">
+                                <span class="kpi-label">อัตรากำไร (Net Margin)</span>
+                                <div class="kpi-icon icon-margin"><i data-lucide="percent"></i></div>
+                            </div>
+                            <h2 class="kpi-value" id="kpi-margin">0%</h2>
+                            <div class="kpi-trend">
+                                <span class="trend-indicator positive" id="kpi-margin-trend">
+                                    <i data-lucide="arrow-up"></i> 0%
+                                </span>
+                                <span class="trend-text">เทียบกับเดือนก่อน</span>
+                            </div>
+                            <div class="kpi-divider"></div>
+                            <div class="kpi-shareholder-profit" id="kpi-margin-compare">
+                                เทียบกับเป้าหมายขั้นต่ำ: <span class="gold-text">20%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 1.2 Comparison Box (YoY/MoM Analysis Bar) -->
+                    <div class="growth-analysis-panel glass-panel">
+                        <div class="panel-header">
+                            <h3><i data-lucide="activity"></i> การวิเคราะห์การเติบโตและเปรียบเทียบข้อมูลย้อนหลัง</h3>
+                        </div>
+                        <div class="analysis-details-grid">
+                            <div class="analysis-item">
+                                <span class="item-label">เทียบกับเดือนที่แล้ว (MoM)</span>
+                                <div class="item-stats">
+                                    <div class="stat-group">
+                                        <span class="label">ยอดขาย:</span>
+                                        <span class="value" id="mom-revenue-change">0%</span>
+                                    </div>
+                                    <div class="stat-group">
+                                        <span class="label">กำไรสุทธิ:</span>
+                                        <span class="value" id="mom-profit-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="item-label">เทียบกับช่วงเดียวกันปีที่แล้ว (YoY)</span>
+                                <div class="item-stats">
+                                    <div class="stat-group">
+                                        <span class="label">ยอดขาย:</span>
+                                        <span class="value" id="yoy-revenue-change">0%</span>
+                                    </div>
+                                    <div class="stat-group">
+                                        <span class="label">กำไรสุทธิ:</span>
+                                        <span class="value" id="yoy-profit-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="item-label">ข้อมูลรวมย้อนหลัง 12 เดือนล่าสุด</span>
+                                <div class="item-stats">
+                                    <div class="stat-group">
+                                        <span class="label">รายได้สะสม:</span>
+                                        <span class="value gold-text" id="cumulative-revenue-12m">฿0</span>
+                                    </div>
+                                    <div class="stat-group">
+                                        <span class="label">กำไรสะสม:</span>
+                                        <span class="value gold-text" id="cumulative-profit-12m">฿0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1.3 Charts Grid -->
+                    <div class="charts-grid">
+                        
+                        <!-- Revenue Breakdown (Pie Chart) -->
+                        <div class="chart-container glass-panel">
+                            <div class="chart-header">
+                                <h3>รายได้ตามช่องทางขาย (Sales Channel)</h3>
+                                <p class="chart-desc text-secondary">แบ่งสัดส่วนยอดขายรวมจาก 5 ช่องทางการจำหน่าย</p>
+                            </div>
+                            <div class="chart-body">
+                                <div id="revenue-pie-chart" class="main-chart"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expenses Breakdown (Horizontal Bar & Table) -->
+                        <div class="chart-container glass-panel">
+                            <div class="chart-header">
+                                <h3>ค่าใช้จ่ายตามหมวดหมู่ (Actual vs Budget)</h3>
+                                <p class="chart-desc text-secondary">จัดเรียงจาก **มากไปน้อย** ตามค่าใช้จ่ายจริง</p>
+                            </div>
+                            <div class="chart-body flex-col">
+                                <div id="expense-bar-chart" class="main-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1.4 Expense Details Table (Sorted least to most) -->
+                    <div class="table-container glass-panel">
+                        <div class="table-header">
+                            <h3>ตารางวิเคราะห์งบประมาณและรายจ่ายแยกหมวดหมู่</h3>
+                            <span class="table-subtitle text-secondary">เรียงลำดับจากค่าใช้จ่ายจริง น้อย ไป มาก</span>
+                        </div>
+                        <table id="expense-breakdown-table">
+                            <thead>
+                                <tr>
+                                    <th>หมวดหมู่ค่าใช้จ่าย</th>
+                                    <th class="text-right">ค่าใช้จ่ายจริง (Actual)</th>
+                                    <th class="text-right">เป้างบประมาณ (% Budget)</th>
+                                    <th class="text-right">เป้างบประมาณ (Target Value)</th>
+                                    <th class="text-right">ส่วนต่าง (Variance)</th>
+                                    <th>สถานะงบประมาณ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expense-table-body">
+                                <!-- ใส่ข้อมูลด้วย JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- VIEW 2: BUDGET SIMULATOR -->
+                <section id="budget-view" class="app-view">
+                    <div class="grid-layout">
+                        
+                        <!-- Budget Controls -->
+                        <div class="column-left glass-panel">
+                            <div class="panel-header-action">
+                                <div>
+                                    <h3>กำหนดค่าและเป้าหมายงบประมาณ (% Budget Target)</h3>
+                                    <p class="text-secondary">ตั้งเกณฑ์ % งบประมาณเมื่อเทียบกับยอดขายประจำสาขาและเดือน</p>
+                                </div>
+                                <button class="btn-primary" id="btn-save-budget"><i data-lucide="save"></i> บันทึกงบประมาณ</button>
+                            </div>
+                            
+                            <div class="budget-sliders-list" id="budget-sliders-container">
+                                <!-- สไลเดอร์งบประมาณจะสร้างด้วย JS -->
+                            </div>
+                            
+                            <div class="budget-summary-bar">
+                                <div class="total-budget-indicator">
+                                    <span>งบประมาณรายจ่ายรวมตั้งเป้า:</span>
+                                    <span id="total-budget-percentage" class="value font-bold">0%</span>
+                                </div>
+                                <div class="expected-profit-indicator">
+                                    <span>อัตรากำไรสุทธิขั้นต่ำที่คาดหวัง:</span>
+                                    <span id="expected-margin-percentage" class="value text-gold font-bold">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Budget Simulation & What-If -->
+                        <div class="column-right glass-panel">
+                            <div class="panel-header">
+                                <h3><i data-lucide="zap"></i> ตัวจำลองความคุ้มค่า (What-If Profit Simulator)</h3>
+                                <p class="text-secondary">ทดลองลดค่าใช้จ่ายหมวดต่างๆ และคำนวณกำไรที่เพิ่มขึ้นแบบ Real-time</p>
+                            </div>
+                            
+                            <div class="simulation-dashboard">
+                                <div class="sim-metrics-grid">
+                                    <div class="sim-metric-card">
+                                        <span class="label">ยอดขายอ้างอิง:</span>
+                                        <span class="value" id="sim-ref-revenue">฿0</span>
+                                    </div>
+                                    <div class="sim-metric-card">
+                                        <span class="label">กำไรเดิม:</span>
+                                        <span class="value" id="sim-original-profit">฿0</span>
+                                    </div>
+                                    <div class="sim-metric-card highlight">
+                                        <span class="label text-gold">กำไรจำลองใหม่:</span>
+                                        <span class="value text-gold font-bold" id="sim-new-profit">฿0</span>
+                                    </div>
+                                    <div class="sim-metric-card">
+                                        <span class="label text-success">กำไรเพิ่มขึ้น:</span>
+                                        <span class="value text-success font-bold" id="sim-profit-gain">+฿0</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="sim-sliders-section">
+                                    <h4>ทดลองปรับลดค่าใช้จ่าย (เป็น % จากปกติ)</h4>
+                                    
+                                    <div class="sim-control-group">
+                                        <div class="sim-label-row">
+                                            <span>ลดค่าวัตถุดิบ</span>
+                                            <span class="val text-success" id="sim-raw-material-pct">-0%</span>
+                                        </div>
+                                        <input type="range" id="sim-slider-raw" min="0" max="20" value="0" step="0.5" class="sim-range">
+                                        <p class="sim-tip">ปรับปรุงการหั่นผัก ควบคุมปริมาณของเสีย จัดหาดีลพิเศษกับโรงงานผลิตไก่/น้ำมัน</p>
+                                    </div>
+                                    
+                                    <div class="sim-control-group">
+                                        <div class="sim-label-row">
+                                            <span>ลดค่าบรรจุภัณฑ์</span>
+                                            <span class="val text-success" id="sim-packaging-pct">-0%</span>
+                                        </div>
+                                        <input type="range" id="sim-slider-pkg" min="0" max="30" value="0" step="1" class="sim-range">
+                                        <p class="sim-tip">เปลี่ยนยี่ห้อกล่อง หรือใช้กล่องกระดาษพับทดแทนวัสดุพลาสติกฟอยล์ราคาแพง</p>
+                                    </div>
+                                    
+                                    <div class="sim-control-group">
+                                        <div class="sim-label-row">
+                                            <span>ประหยัดค่าน้ำค่าน้ำไฟ</span>
+                                            <span class="val text-success" id="sim-utilities-pct">-0%</span>
+                                        </div>
+                                        <input type="range" id="sim-slider-utils" min="0" max="15" value="0" step="0.5" class="sim-range">
+                                        <p class="sim-tip">ตั้งเวลาปิดอุปกรณ์เครื่องทอด ปิดแอร์ช่วงร้านไม่มีลูกค้า เปลี่ยนมาใช้หลอดประหยัดไฟ LED</p>
+                                    </div>
+                                    
+                                    <div class="sim-control-group">
+                                        <div class="sim-label-row">
+                                            <span>ลดงบการตลาดเดลิเวอรี่</span>
+                                            <span class="val text-success" id="sim-marketing-pct">-0%</span>
+                                        </div>
+                                        <input type="range" id="sim-slider-mkt" min="0" max="25" value="0" step="1" class="sim-range">
+                                        <p class="sim-tip">เน้นสร้างยอดขายออร์แกนิก ทำคอนเทนต์ TikTok โฟกัสการจดจำแบรนด์แทนการสาดค่าโฆษณา</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- VIEW 3: TRANSACTION EXPLORER -->
+                <section id="transactions-view" class="app-view">
+                    
+                    <!-- Search & Filter Controls -->
+                    <div class="filter-actions-bar glass-panel">
+                        <div class="search-filters-left">
+                            <div class="input-icon-wrapper">
+                                <i data-lucide="search" class="input-icon"></i>
+                                <input type="text" id="tx-search-input" placeholder="ค้นหารายการ..." class="tx-input">
+                            </div>
+                            
+                            <select id="tx-filter-type" class="tx-select">
+                                <option value="all">ประเภทธุรกรรมทั้งหมด</option>
+                                <option value="income">รายรับ (Income)</option>
+                                <option value="expense">รายจ่าย (Expense)</option>
+                            </select>
+                            
+                            <select id="tx-filter-category" class="tx-select">
+                                <option value="all">ทุกหมวดหมู่ธุรกรรม</option>
+                                <!-- จะใส่หมวดหมู่โดย JS -->
+                            </select>
+                        </div>
+                        
+                        <div class="actions-right">
+                            <button class="btn-outline" id="btn-sync-cloudflare" onclick="syncDataToCloudflare()" title="Sync รายการทั้งหมดขึ้น Cloudflare D1 Database"><i data-lucide="cloud-upload"></i> Sync Cloudflare D1</button>
+                            <button class="btn-outline" id="btn-export-csv"><i data-lucide="download"></i> ส่งออก CSV</button>
+                            <button class="btn-outline" id="btn-open-import-modal" onclick="openImportModal()" style="border-color: var(--color-gold); color: var(--color-gold);"><i data-lucide="file-spreadsheet"></i> นำเข้าข้อมูล (Sheets/CSV)</button>
+                            <button class="btn-primary" id="btn-open-add-modal" onclick="openModal()"><i data-lucide="plus"></i> บันทึกรายการใหม่</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Transactions Table -->
+                    <div class="table-container glass-panel">
+                        <div class="table-responsive">
+                            <table id="transactions-table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสรายการ</th>
+                                        <th>วันที่</th>
+                                        <th>สาขา</th>
+                                        <th>ประเภท</th>
+                                        <th>หมวดหมู่ / ช่องทาง</th>
+                                        <th class="text-right">จำนวนเงิน</th>
+                                        <th>รายละเอียด</th>
+                                        <th class="text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-table-body">
+                                    <!-- ใส่ข้อมูลด้วย JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-pagination" id="tx-pagination-container">
+                            <!-- pagination controls -->
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- VIEW 4: SHAREHOLDERS INFO -->
+                <section id="shareholders-view" class="app-view">
+                    
+                    <div class="shareholder-summary-header glass-panel">
+                        <div class="header-avatar"><i data-lucide="pie-chart"></i></div>
+                        <div class="header-info">
+                            <h3 id="sh-branch-title">ข้อมูลโครงสร้างหุ้นและผลตอบแทนปันผล</h3>
+                            <p class="text-secondary" id="sh-branch-desc">แสดงสัดส่วนผู้ถือหุ้นของสาขาที่กำลังดูและรายละเอียดการคำนวณเงินกำไรสุทธิ</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-layout mt-6">
+                        <!-- Left Panel: Shareholder Distribution Table & Chart -->
+                        <div class="column-left glass-panel">
+                            <h3>สัดส่วนหุ้นและผลตอบแทนในสาขาที่เลือก</h3>
+                            <div class="chart-divider mt-4"></div>
+                            
+                            <div class="table-container mt-4 no-bg no-padding">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ผู้ถือหุ้น</th>
+                                            <th class="text-center">สัดส่วนหุ้น (%)</th>
+                                            <th class="text-right">กำไรสุทธิสะสม (สะท้อนสิทธิ์)</th>
+                                            <th class="text-right">ปันผลสุทธิประจำเดือนนี้</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="shareholders-table-body">
+                                        <!-- ใส่ข้อมูลผู้ถือหุ้นด้วย JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Panel: Info Cards / Rules -->
+                        <div class="column-right flex-col gap-6">
+                            
+                            <!-- Current Shareholder Personal Card -->
+                            <div class="kpi-card glass-panel highlight-gold">
+                                <div class="kpi-header">
+                                    <span class="kpi-label text-gold">สิทธิประโยชน์ส่วนตัวของคุณเดือนนี้</span>
+                                    <div class="kpi-icon icon-profit"><i data-lucide="award"></i></div>
+                                </div>
+                                <div class="personal-sh-details mt-4">
+                                    <div class="sh-stat-row">
+                                        <span>สาขาที่ดูอยู่:</span>
+                                        <span id="sh-personal-branch" class="font-bold">สาขาลาดพร้าว</span>
+                                    </div>
+                                    <div class="sh-stat-row">
+                                        <span>สัดส่วนหุ้นของคุณ:</span>
+                                        <span id="sh-personal-pct" class="font-bold text-gold">50%</span>
+                                    </div>
+                                    <div class="sh-stat-row">
+                                        <span>ส่วนแบ่งรายได้เดือนนี้:</span>
+                                        <span id="sh-personal-revenue">฿0</span>
+                                    </div>
+                                    <div class="sh-stat-row">
+                                        <span>ภาระรายจ่ายเดือนนี้:</span>
+                                        <span id="sh-personal-expense">฿0</span>
+                                    </div>
+                                    <div class="divider"></div>
+                                    <div class="sh-stat-row font-semibold mt-2">
+                                        <span class="text-gold">ส่วนแบ่งกำไรสุทธิเดือนนี้:</span>
+                                        <span id="sh-personal-profit" class="text-gold font-bold text-xl">฿0</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Shareholder Policy/Notes -->
+                            <div class="glass-panel text-secondary">
+                                <h4 class="font-semibold text-white mb-2"><i data-lucide="info" class="inline-icon"></i> นโยบายการคำนวณและปันผล</h4>
+                                <ul class="policy-list text-sm">
+                                    <li>1. กำไรสุทธิคำนวณจาก [รายได้รวม - ค่าใช้จ่ายรวม] ในเดือนนั้นๆ</li>
+                                    <li>2. ผลตอบแทนปันผลจะจัดสรรตามเปอร์เซ็นต์สัดส่วนการถือครองหุ้นของแต่ละคนในสาขานั้นๆ</li>
+                                    <li>3. หากสาขามีผลประกอบการขาดทุน ภาระการขาดทุนจะถูกบันทึกตามสัดส่วนของสิทธิ์หุ้นเช่นกัน</li>
+                                    <li>4. ข้อมูลปิ่นเกล้ากำลังอยู่ระหว่างการเตรียมเปิดตัว ระบบเริ่มแสดงธุรกรรมตั้งแต่ กรกฎาคม 2026 เป็นต้นไป</li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. ADD TRANSACTION MODAL -->
+    <div id="add-tx-modal" class="modal-overlay">
+        <div class="modal-card glass-panel">
+            <div class="modal-header">
+                <h3><i data-lucide="receipt"></i> บันทึกรายการรายรับ/รายจ่ายใหม่</h3>
+                <button type="button" class="btn-close-modal" id="btn-close-modal" onclick="closeModal()"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="add-tx-form" onsubmit="submitAddTransaction(event)">
+                <div class="modal-body">
+                    
+                    <div class="form-row">
+                        <div class="form-group w-half">
+                            <label for="tx-branch"><i data-lucide="map-pin"></i> เลือกสาขา</label>
+                            <select id="tx-branch" required>
+                                <!-- จะใส่ค่า JS -->
+                            </select>
+                        </div>
+                        <div class="form-group w-half">
+                            <label for="tx-date"><i data-lucide="calendar"></i> วันที่ทำรายการ</label>
+                            <input type="date" id="tx-date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i data-lucide="circle-dot"></i> ประเภทธุรกรรม</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="tx-type" value="income" checked id="radio-income" onchange="handleTxTypeChange()">
+                                <span>รายรับ (Income)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="tx-type" value="expense" id="radio-expense" onchange="handleTxTypeChange()">
+                                <span>รายจ่าย (Expense)</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <!-- Dropdown ของช่องทางการขาย (แสดงเฉพาะรายรับ) -->
+                        <div class="form-group w-half" id="tx-channel-container">
+                            <label for="tx-channel"><i data-lucide="shopping-bag"></i> ช่องทางการขาย</label>
+                            <select id="tx-channel">
+                                <option value="storefront">หน้าร้าน</option>
+                                <option value="lineman">Lineman</option>
+                                <option value="grab">Grab</option>
+                                <option value="shopee">Shopee</option>
+                                <option value="dotdash">Dotdash</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Dropdown ของหมวดหมู่ค่าใช้จ่าย (แสดงเฉพาะรายจ่าย) -->
+                        <div class="form-group w-half hidden" id="tx-category-container">
+                            <label for="tx-category"><i data-lucide="tag"></i> หมวดหมู่ค่าใช้จ่าย</label>
+                            <select id="tx-category">
+                                <option value="raw_material">วัตถุดิบ</option>
+                                <option value="salary">ค่าจ้าง/เงินเดือน</option>
+                                <option value="rent">ค่าเช่าที่</option>
+                                <option value="utilities">ค่าน้ำไฟ/สาธารณูปโภค</option>
+                                <option value="marketing">ค่าการตลาด</option>
+                                <option value="packaging">ค่าบรรจุภัณฑ์</option>
+                                <option value="gp">ค่า GP Delivery</option>
+                                <option value="others">อื่นๆ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group w-half">
+                            <label for="tx-amount"><i data-lucide="banknote"></i> จำนวนเงิน (บาท)</label>
+                            <input type="number" id="tx-amount" min="1" step="any" inputmode="decimal" placeholder="เช่น 2500" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tx-desc"><i data-lucide="file-text"></i> รายละเอียด / คำอธิบายเพิ่มเติม <span class="text-secondary" style="font-weight: normal; font-size: 0.8rem;">(ไม่บังคับกรอก)</span></label>
+                        <input type="text" id="tx-desc" placeholder="เช่น ยอดขายเดลิเวอรี่วันนี้ หรือ ซื้อน้ำมันหมู... (เว้นว่างได้)">
+                    </div>
+                    
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline" id="btn-cancel-modal" onclick="closeModal()">ยกเลิก</button>
+                    <button type="button" class="btn-primary" id="btn-submit-tx" onclick="submitAddTransaction(event)">บันทึกรายการ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. BULK IMPORT MODAL (Google Sheets / CSV) -->
+    <div id="import-tx-modal" class="modal-overlay">
+        <div class="modal-card modal-lg glass-panel">
+            <div class="modal-header">
+                <h3><i data-lucide="file-spreadsheet"></i> นำเข้าข้อมูลหลายธุรกรรมจาก Google Sheets / CSV</h3>
+                <button type="button" class="btn-close-modal" onclick="closeImportModal()"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="import-tabs">
+                    <button type="button" class="import-tab-btn active" id="tab-btn-paste" onclick="switchImportTab('paste')"><i data-lucide="clipboard-paste" class="inline-icon"></i> คัดลอกและวางข้อมูล (Copy & Paste)</button>
+                    <button type="button" class="import-tab-btn" id="tab-btn-file" onclick="switchImportTab('file')"><i data-lucide="upload" class="inline-icon"></i> อัปโหลดไฟล์ .CSV</button>
+                </div>
+                
+                <div id="import-tab-paste">
+                    <p class="text-secondary mb-2" style="font-size: 0.85rem;">
+                        💡 สามารถ Copy ตารางจาก <strong>Google Sheets หรือ Excel</strong> แล้วกด <strong>Ctrl+V / Cmd+V</strong> วางลงในช่องนี้ได้โดยตรง (รองรับทั้งตารางยอดขายแยกช่องทาง และตารางบันทึกรายรับ-รายจ่ายทั่วไป):
+                    </p>
+                    <textarea id="import-paste-area" class="import-textarea" placeholder="ตัวอย่างที่ 1 (ตารางยอดขายแยกช่องทาง):
+Date,Branch,หน้าร้าน,Lineman,Grab,Shopee
+01/ 6/26,B1_Ladphrao,3807,12791,8439,2160
+02/ 6/26,B1_Ladphrao,4213,14919,9181,1940
+
+ตัวอย่างที่ 2 (ตารางบันทึกทั่วไป):
+วันที่,สาขา,ประเภท,หมวดหมู่,จำนวนเงิน,รายละเอียด
+2026-06-01,ladprao,income,storefront,3807,ขายหน้าร้าน"></textarea>
+                </div>
+                
+                <div id="import-tab-file" class="hidden">
+                    <div class="import-dropzone" id="import-dropzone" onclick="document.getElementById('import-file-input').click()">
+                        <i data-lucide="cloud-upload" style="width: 44px; height: 44px; margin: 0 auto 8px auto; display: block;"></i>
+                        <p class="font-semibold">คลิกเพื่อเลือกไฟล์ CSV หรือลากไฟล์มาวางที่นี่</p>
+                        <p class="text-secondary" style="font-size: 0.8rem; margin-top: 4px;">รองรับไฟล์ .csv ที่ Export มาจาก Google Sheets / Excel</p>
+                        <input type="file" id="import-file-input" accept=".csv" style="display: none;">
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <button type="button" class="btn-outline" onclick="parseAndPreviewImport()"><i data-lucide="eye"></i> ตรวจสอบข้อมูล (Preview)</button>
+                    <span id="import-count-badge" class="badge badge-warning hidden">ตรวจพบ 0 รายการ</span>
+                </div>
+                
+                <!-- Preview Table -->
+                <div id="import-preview-box" class="import-preview-box hidden">
+                    <table class="import-preview-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>วันที่</th>
+                                <th>สาขา</th>
+                                <th>ประเภท</th>
+                                <th>ช่องทาง / หมวดหมู่</th>
+                                <th class="text-right">จำนวนเงิน</th>
+                                <th>รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-preview-body">
+                            <!-- JS generate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-outline" onclick="closeImportModal()">ยกเลิก</button>
+                <button type="button" class="btn-primary" id="btn-confirm-import" onclick="confirmBulkImport()" disabled><i data-lucide="check-circle"></i> ยืนยันการนำเข้าข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="data.js?v=20"></script>
+    <script src="charts.js?v=20"></script>
+    <script src="app.js?v=20"></script>
+</body>
+</html>
